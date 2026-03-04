@@ -54,32 +54,57 @@ jobs:
     needs: docker-build
     environment:
       name: staging
+
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository }}
+      IMAGE_TAG: ${{ github.sha }}
+
     steps:
-      
       - uses: actions/checkout@v4
-           # 🔹 Install kind automatically
+
+      #  Create kind cluster
       - name: Create kind cluster
         uses: helm/kind-action@v1
 
-      # 🔹 Load image into kind (IMPORTANT)
-      - name: Load Docker image into kind
-        run: |
-          docker pull $IMAGE_NAME:$IMAGE_TAG
-          kind load docker-image $IMAGE_NAME:$IMAGE_TAG
+      #  Pull image from GHCR
+      - name: Pull Docker image
+        run: docker pull $IMAGE_NAME:$IMAGE_TAG
 
-      - name: Replace Image Tag
-        run: |
-          sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" k8s/deployment.yaml
+      #  Load image into kind cluster
+      - name: Load image into kind
+        run: kind load docker-image $IMAGE_NAME:$IMAGE_TAG
 
-      # 🔹 Deploy
-      - name: Deploy to Kubernetes
+      #  Replace full image reference in deployment
+      - name: Update deployment image
+        run: |
+          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_NAME:$IMAGE_TAG|g" k8s/deployment.yaml
+
+      # Deploy manifests
+      - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
 
-      - name: Verify
-        run: kubectl get all
+      #  Wait for rollout
+      - name: Wait for rollout
+        run: kubectl rollout status deployment/simple-api
 
+      #  Verify resources
+      - name: Verify deployment
+        run: |
+          kubectl get all
+      - name: Test Application
+        run: |
+          kubectl port-forward service/simple-api 8080:3000 &
+          sleep 5
+          curl -f http://localhost:8080 || exit 1
+
+      #  Rollback only if deployment exists AND failure happens
       - name: Rollback on failure
         if: failure()
-        run: kubectl rollout undo deployment/simple-api
+        run: |
+          if kubectl get deployment simple-api; then
+            kubectl rollout undo deployment/simple-api
+          else
+            echo "Deployment not found. Skipping rollback."
+          fi  
