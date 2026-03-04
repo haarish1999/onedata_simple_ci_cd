@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: simple-api
-          image: ghcr.io/YOUR_USERNAME/simple-python-ci-cd:IMAGE_TAG
+          image: ghcr.io/haarish1999/onedata_simple_ci_cd:IMAGE_TAG
           ports:
             - containerPort: 8000

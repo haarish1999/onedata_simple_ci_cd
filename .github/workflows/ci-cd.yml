@@ -55,20 +55,31 @@ jobs:
     environment:
       name: staging
     steps:
+      
       - uses: actions/checkout@v4
+           # 🔹 Install kind automatically
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+
+      # 🔹 Load image into kind (IMPORTANT)
+      - name: Load Docker image into kind
+        run: |
+          docker pull $IMAGE_NAME:$IMAGE_TAG
+          kind load docker-image $IMAGE_NAME:$IMAGE_TAG
+
       - name: Replace Image Tag
         run: |
           sed -i "s|IMAGE_TAG|${IMAGE_TAG}|g" k8s/deployment.yaml
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-      - name: Configure Kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-      - name: Deploy
+
+      # 🔹 Deploy
+      - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
+
+      - name: Verify
+        run: kubectl get all
+
       - name: Rollback on failure
         if: failure()
         run: kubectl rollout undo deployment/simple-api
