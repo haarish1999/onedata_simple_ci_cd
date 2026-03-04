@@ -2,10 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: simple-api
-  labels:
-    app: simple-api
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: simple-api
@@ -14,25 +12,8 @@ spec:
       labels:
         app: simple-api
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
-        - name: api
-          image: IMAGE_PLACEHOLDER
+        - name: simple-api
+          image: ghcr.io/YOUR_USERNAME/simple-python-ci-cd:IMAGE_TAG
           ports:
-            - containerPort: 3000
-          env:
-            - name: PORT
-              value: "3000"
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 2
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            - containerPort: 8000

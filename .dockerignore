@@ -1,8 +1,0 @@
-node_modules
-npm-debug.log
-Dockerfile
-.git
-.github
-test
-k8s
-README.md
