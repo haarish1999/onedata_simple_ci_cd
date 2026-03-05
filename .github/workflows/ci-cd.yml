@@ -48,6 +48,22 @@ jobs:
       - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
       - run: docker push $IMAGE_NAME:$IMAGE_TAG
+      # Configure AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Store image URI in SSM
+      - name: Store Image URI in SSM
+        run: |
+          aws ssm put-parameter \
+            --name "/cicd/simple-api/image-uri" \
+            --value "$IMAGE_NAME:$IMAGE_TAG" \
+            --type "String" \
+            --overwrite
 
   deploy:
     runs-on: ubuntu-latest
